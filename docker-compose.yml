@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./backend/assets:/app/assets
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - SD_URL=http://stable-diffusion:7860
+    depends_on:
+      - ollama
+      - stable-diffusion
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: /bin/sh -c "ollama serve & sleep 10 && ollama pull llama3 && wait"
+
+  stable-diffusion:
+    image: siutin/stable-diffusion-webui-docker:latest-cpu
+    ports:
+      - "7860:7860"
+    # Added explicit command for the webui
+    command: bash -c "cd /app/stable-diffusion-webui && /app/miniconda3/bin/python launch.py --skip-torch-cuda-test --precision full --no-half --use-cpu all --listen --port 7860"
+
+volumes:
+  ollama_data:
